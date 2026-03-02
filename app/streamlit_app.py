@@ -16,6 +16,16 @@ STAGE_DIST_FILE = OUTPUT_DIR / "stage_distribution.csv"
 SUMMARY_FILE = OUTPUT_DIR / "portfolio_summary.csv"
 
 
+def format_brl(value: float) -> str:
+    formatted = f"{value:,.2f}"
+    formatted = formatted.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {formatted}"
+
+
+def format_pct(value: float) -> str:
+    return f"{value * 100:.2f}%"
+
+
 @st.cache_data
 def load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if not ECL_FILE.exists():
@@ -54,19 +64,23 @@ def main() -> None:
     coverage = total_ecl / total_ead if total_ead > 0 else 0.0
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Total EAD", f"{total_ead:,.2f}")
-    c2.metric("Total ECL (Sensitivity)", f"{total_ecl:,.2f}")
-    c3.metric("Coverage Ratio", f"{coverage:.2%}")
+    c1.metric("Total EAD", format_brl(total_ead))
+    c2.metric("Total ECL (Sensitivity)", format_brl(total_ecl))
+    c3.metric("Coverage Ratio", format_pct(coverage))
 
     st.subheader("Stage Distribution")
+    stage_plot = stage_dist_df.copy()
+    stage_plot["total_ecl_label"] = stage_plot["total_ecl"].apply(format_brl)
     fig_stage = px.bar(
-        stage_dist_df,
+        stage_plot,
         x="stage",
         y="total_ecl",
-        text="total_ecl",
+        text="total_ecl_label",
         title="Allowance by Stage",
         labels={"stage": "Stage", "total_ecl": "Total ECL"},
     )
+    fig_stage.update_yaxes(tickprefix="R$ ")
+    fig_stage.update_traces(hovertemplate="Stage %{x}<br>Total ECL: %{text}<extra></extra>")
     st.plotly_chart(fig_stage, use_container_width=True)
 
     st.subheader("Top 20 Exposures by ECL")
@@ -82,6 +96,10 @@ def main() -> None:
         title="Top 20 Loans by ECL",
         labels={"ecl_sensitivity": "ECL", "loan_id": "Loan ID"},
     )
+    fig_top20.update_xaxes(tickprefix="R$ ")
+    fig_top20.update_traces(
+        hovertemplate="Loan %{y}<br>ECL: R$ %{x:,.2f}<br>Stage: %{marker.color}<extra></extra>"
+    )
     st.plotly_chart(fig_top20, use_container_width=True)
 
     st.subheader("Drill-down by Segment")
@@ -95,8 +113,11 @@ def main() -> None:
         .sort_values("total_ecl", ascending=False)
     )
     seg_summary["coverage_ratio"] = seg_summary["total_ecl"] / seg_summary["total_ead"]
-
-    st.dataframe(seg_summary, use_container_width=True)
+    seg_display = seg_summary.copy()
+    seg_display["total_ead"] = seg_display["total_ead"].apply(format_brl)
+    seg_display["total_ecl"] = seg_display["total_ecl"].apply(format_brl)
+    seg_display["coverage_ratio"] = seg_display["coverage_ratio"].apply(format_pct)
+    st.dataframe(seg_display, use_container_width=True)
 
     fig_seg = px.pie(
         seg_summary,
@@ -107,22 +128,26 @@ def main() -> None:
     st.plotly_chart(fig_seg, use_container_width=True)
 
     st.subheader("Raw Portfolio Sample")
-    st.dataframe(
-        df[
-            [
-                "loan_id",
-                "segment",
-                "product_type",
-                "stage",
-                "ead",
-                "lgd",
-                "pd_effective",
-                "ecl_final",
-                "ecl_sensitivity",
-            ]
-        ].head(100),
-        use_container_width=True,
-    )
+    raw_sample = df[
+        [
+            "loan_id",
+            "segment",
+            "product_type",
+            "stage",
+            "ead",
+            "lgd",
+            "pd_effective",
+            "ecl_final",
+            "ecl_sensitivity",
+        ]
+    ].head(100)
+    raw_display = raw_sample.copy()
+    raw_display["ead"] = raw_display["ead"].apply(format_brl)
+    raw_display["ecl_final"] = raw_display["ecl_final"].apply(format_brl)
+    raw_display["ecl_sensitivity"] = raw_display["ecl_sensitivity"].apply(format_brl)
+    raw_display["lgd"] = raw_display["lgd"].apply(format_pct)
+    raw_display["pd_effective"] = raw_display["pd_effective"].apply(format_pct)
+    st.dataframe(raw_display, use_container_width=True)
 
 
 if __name__ == "__main__":
