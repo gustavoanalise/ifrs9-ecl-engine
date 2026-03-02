@@ -197,7 +197,7 @@ Gerados em `data/output`:
 - Fluxo reproduzivel fim a fim
 - Commits incrementais por etapa
 
-## 8. Limitacoes atuais e evolucao recomendada
+## 8. Limitacoes atuais 
 
 Limitacoes:
 
@@ -205,14 +205,6 @@ Limitacoes:
 - Staging simplificado (sem cure logic e sem watchlist)
 - PD/LGD sem calibracao estatistica real
 - Rollforward com decomposicao didatica
-
-Proximos passos recomendados:
-
-- Curvas de PD por horizonte mensal/coorte
-- LGD com recovery cash flow descontado por EIR
-- Validacao out-of-time e monitoramento de performance
-- Backtesting de cenario e overlay committee pack
-- Testes unitarios automatizados por modulo
 
 ## 9. Dependencias
 
